@@ -1,0 +1,43 @@
+body {
+    background: #f7f8fa;
+}
+
+.filter-panel {
+    background: linear-gradient(135deg, #fff 0%, #f6f8ff 100%);
+}
+
+.resource-card {
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.resource-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(20, 20, 43, .08);
+}
+
+.preview-cover {
+    width: 100%;
+    height: 170px;
+    object-fit: cover;
+}
+
+.placeholder-box {
+    width: 100%;
+    height: 170px;
+    background: linear-gradient(135deg, #d9dde8 0%, #eef0f5 100%);
+}
+
+.detail-preview {
+    max-height: 460px;
+    object-fit: contain;
+    width: 100%;
+    background: #111;
+}
+
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

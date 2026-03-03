@@ -1,0 +1,12 @@
+services:
+  ikun-web:
+    build: .
+    container_name: ikun-web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/ikun.db
+    volumes:
+      - ./data:/srv/ikun/data
+      - ./app/uploads:/srv/ikun/app/uploads

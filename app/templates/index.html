@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-8">
+            <h1 class="h3 mb-2">IKUN 资源分享大厅</h1>
+            <p class="text-secondary mb-0">收录视频、歌曲、图片、表情包等优质资源，支持搜索和分类筛选。</p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+            <a href="/upload" class="btn btn-warning fw-semibold">+ 上传我的资源</a>
+        </div>
+    </div>
+</section>
+
+<section class="card card-body mb-4 shadow-sm border-0 filter-panel">
+    <form method="get" action="/" class="row g-2">
+        <div class="col-md-5">
+            <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="搜索标题、标签、作者...">
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="category">
+                <option value="all" {% if current_category == 'all' %}selected{% endif %}>全部分类</option>
+                {% for key, label in categories %}
+                <option value="{{ key }}" {% if current_category == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select class="form-select" name="sort">
+                <option value="latest" {% if current_sort == 'latest' %}selected{% endif %}>最新上传</option>
+                <option value="popular" {% if current_sort == 'popular' %}selected{% endif %}>下载最多</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-dark">筛选</button>
+        </div>
+    </form>
+</section>
+
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">资源列表</h2>
+        <span class="text-secondary small">共 {{ resources|length }} 条</span>
+    </div>
+    {% if resources %}
+    <div class="row g-3">
+        {% for item in resources %}
+        <div class="col-md-6 col-xl-4">
+            <div class="card h-100 shadow-sm border-0 resource-card">
+                {% if item.preview_image %}
+                <img src="{{ item.preview_image }}" class="card-img-top preview-cover" alt="{{ item.title }}">
+                {% else %}
+                <div class="placeholder-box d-flex align-items-center justify-content-center">
+                    <span class="badge text-bg-secondary">{{ item.category }}</span>
+                </div>
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <h3 class="h6 mb-0">{{ item.title }}</h3>
+                        <span class="badge text-bg-warning">{{ item.category }}</span>
+                    </div>
+                    <p class="text-secondary small mb-2 text-truncate-2">{{ item.description or '暂无描述' }}</p>
+                    <p class="small mb-1"><span class="text-secondary">作者：</span>{{ item.author }}</p>
+                    <p class="small mb-1"><span class="text-secondary">标签：</span>{{ item.tags or '未设置' }}</p>
+                    <p class="small mb-3"><span class="text-secondary">下载：</span>{{ item.downloads }}</p>
+                    <div class="mt-auto d-flex gap-2">
+                        <a href="/resource/{{ item.id }}" class="btn btn-sm btn-outline-dark flex-fill">查看详情</a>
+                        <a href="/download/{{ item.id }}" class="btn btn-sm btn-warning flex-fill">获取资源</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-light border">
+        暂无匹配内容，去 <a href="/upload">上传页</a> 发布第一条资源吧。
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
