@@ -29,6 +29,8 @@ class Resource(Base):
     file_path = Column(String(500), default="")
     preview_image = Column(String(500), default="")
     downloads = Column(Integer, default=0)
+    likes = Column(Integer, default=0)
+    favorites = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     @property

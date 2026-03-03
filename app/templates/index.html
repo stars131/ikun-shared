@@ -133,7 +133,15 @@
                         {% for item in resources %}
                         <article class="post-card">
                             {% if item.preview_image %}
-                            <a href="/resource/{{ item.id }}"><img src="{{ item.preview_image }}" class="post-cover" alt="{{ item.title }}"></a>
+                            <div class="post-media ratio-auto">
+                                <a href="/resource/{{ item.id }}">
+                                    <img src="{{ item.preview_image }}" class="post-cover adaptive-cover" alt="{{ item.title }}" loading="lazy">
+                                </a>
+                            </div>
+                            {% else %}
+                            <a href="/resource/{{ item.id }}" class="post-fallback text-decoration-none">
+                                <span>{{ item.category_label }}</span>
+                            </a>
                             {% endif %}
                             <div class="post-body">
                                 <a href="/resource/{{ item.id }}" class="post-title text-decoration-none">{{ item.title }}</a>
@@ -146,6 +154,14 @@
                                 <div class="small text-secondary d-flex justify-content-between">
                                     <span>{{ item.author }}</span>
                                     <span>⬇ {{ item.downloads }}</span>
+                                </div>
+                                <div class="resource-reactions d-flex gap-2 mt-2" data-resource-id="{{ item.id }}">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary interaction-btn" data-action="like" data-resource-id="{{ item.id }}">
+                                        👍 <span data-role="like-count">{{ item.likes }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary interaction-btn" data-action="favorite" data-resource-id="{{ item.id }}">
+                                        ⭐ <span data-role="favorite-count">{{ item.favorites }}</span>
+                                    </button>
                                 </div>
                             </div>
                         </article>
@@ -169,6 +185,14 @@
                                         <span>分类：{{ item.category_label }}</span>
                                         <span>文件：{{ item.file_name }}</span>
                                         <span>下载：{{ item.downloads }}</span>
+                                    </div>
+                                    <div class="resource-reactions d-flex gap-2 mt-2" data-resource-id="{{ item.id }}">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary interaction-btn" data-action="like" data-resource-id="{{ item.id }}">
+                                            👍 <span data-role="like-count">{{ item.likes }}</span>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary interaction-btn" data-action="favorite" data-resource-id="{{ item.id }}">
+                                            ⭐ <span data-role="favorite-count">{{ item.favorites }}</span>
+                                        </button>
                                     </div>
                                 </div>
                                 <div class="d-flex gap-2 align-items-start">

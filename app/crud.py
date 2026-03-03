@@ -51,7 +51,7 @@ def list_resources(
 def _trend_score(resource: Resource, now: datetime, window_days: int) -> float:
     age_days = max(0.0, (now - resource.created_at).total_seconds() / 86400.0)
     freshness_bonus = max(0.0, window_days - age_days)
-    return resource.downloads * 5 + freshness_bonus
+    return resource.downloads * 5 + resource.likes * 3 + resource.favorites * 4 + freshness_bonus
 
 
 def list_trending(db: Session, days: int | None = 7, limit: int = 20) -> list[Resource]:
@@ -94,6 +94,22 @@ def list_hot_tags(db: Session, limit: int = 20) -> list[tuple[str, int]]:
 
 def increase_download(db: Session, resource: Resource) -> Resource:
     resource.downloads += 1
+    db.add(resource)
+    db.commit()
+    db.refresh(resource)
+    return resource
+
+
+def increase_like(db: Session, resource: Resource) -> Resource:
+    resource.likes += 1
+    db.add(resource)
+    db.commit()
+    db.refresh(resource)
+    return resource
+
+
+def increase_favorite(db: Session, resource: Resource) -> Resource:
+    resource.favorites += 1
     db.add(resource)
     db.commit()
     db.refresh(resource)

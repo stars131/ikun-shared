@@ -6,7 +6,7 @@
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                     <span class="badge text-bg-warning">{{ resource.category_label }}</span>
-                    <span class="small text-secondary">下载 {{ resource.downloads }} 次</span>
+                    <span class="small text-secondary">下载 {{ resource.downloads }} 次 · 👍 {{ resource.likes }} · ⭐ {{ resource.favorites }}</span>
                 </div>
                 <h1 class="h3 mb-3">{{ resource.title }}</h1>
 
@@ -38,6 +38,14 @@
 
                 <div class="d-flex flex-wrap gap-2">
                     <a href="/download/{{ resource.id }}" class="btn btn-warning">立即获取</a>
+                    <div class="resource-reactions d-flex gap-2" data-resource-id="{{ resource.id }}">
+                        <button type="button" class="btn btn-outline-secondary interaction-btn" data-action="like" data-resource-id="{{ resource.id }}">
+                            👍 <span data-role="like-count">{{ resource.likes }}</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary interaction-btn" data-action="favorite" data-resource-id="{{ resource.id }}">
+                            ⭐ <span data-role="favorite-count">{{ resource.favorites }}</span>
+                        </button>
+                    </div>
                     {% if resource.external_url %}
                     <a href="{{ resource.external_url }}" class="btn btn-outline-secondary" target="_blank" rel="noopener">打开外链</a>
                     {% endif %}

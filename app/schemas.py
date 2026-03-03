@@ -22,6 +22,8 @@ class ResourceCreate(ResourceBase):
 class ResourceOut(ResourceBase):
     id: int
     downloads: int
+    likes: int
+    favorites: int
     created_at: datetime
 
     class Config:

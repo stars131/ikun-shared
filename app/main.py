@@ -8,6 +8,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request,
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from . import crud, schemas
@@ -81,6 +82,18 @@ def ensure_dirs():
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def ensure_resource_columns():
+    inspector = inspect(engine)
+    if "resources" not in inspector.get_table_names():
+        return
+    column_names = {column["name"] for column in inspector.get_columns("resources")}
+    with engine.begin() as connection:
+        if "likes" not in column_names:
+            connection.execute(text("ALTER TABLE resources ADD COLUMN likes INTEGER DEFAULT 0"))
+        if "favorites" not in column_names:
+            connection.execute(text("ALTER TABLE resources ADD COLUMN favorites INTEGER DEFAULT 0"))
+
+
 def category_label(category_key: str) -> str:
     return CATEGORY_LABELS.get(category_key, category_key)
 
@@ -122,6 +135,7 @@ templates.env.globals["category_label"] = category_label
 def on_startup():
     ensure_dirs()
     Base.metadata.create_all(bind=engine)
+    ensure_resource_columns()
 
 
 @app.get("/")
@@ -336,6 +350,24 @@ def trending_page(
             "current_period": current_period["key"],
         },
     )
+
+
+@app.post("/api/resources/{resource_id}/like")
+def like_resource(resource_id: int, db: Session = Depends(get_db)):
+    resource = crud.get_resource(db, resource_id)
+    if not resource:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    updated = crud.increase_like(db, resource)
+    return {"resource_id": updated.id, "likes": updated.likes, "favorites": updated.favorites}
+
+
+@app.post("/api/resources/{resource_id}/favorite")
+def favorite_resource(resource_id: int, db: Session = Depends(get_db)):
+    resource = crud.get_resource(db, resource_id)
+    if not resource:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    updated = crud.increase_favorite(db, resource)
+    return {"resource_id": updated.id, "likes": updated.likes, "favorites": updated.favorites}
 
 
 @app.get("/api/resources", response_model=list[schemas.ResourceOut])
