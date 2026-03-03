@@ -4,22 +4,20 @@
     <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
         <div>
             <h1 class="h3 mb-1">资源分类</h1>
-            <p class="text-secondary mb-0">类似 GitHub Explore 的分类浏览，支持标签与趋势联动。</p>
+            <p class="text-secondary mb-0">GitHub 风格分类浏览，支持一键切换小红书帖子流。</p>
         </div>
         <a href="/upload" class="btn btn-warning fw-semibold">+ 上传新文件</a>
     </div>
 
     <form method="get" action="/" class="card border-0 shadow-sm p-3">
         <div class="row g-2 align-items-center">
-            <div class="col-lg-5">
+            <div class="col-lg-4">
                 <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="搜索标题 / 标签 / 作者">
             </div>
-            <div class="col-lg-3">
+            <div class="col-lg-2">
                 <select class="form-select" name="category">
                     {% for item in category_items %}
-                    <option value="{{ item.key }}" {% if current_category == item.key %}selected{% endif %}>
-                        {{ item.icon }} {{ item.label }}
-                    </option>
+                    <option value="{{ item.key }}" {% if current_category == item.key %}selected{% endif %}>{{ item.icon }} {{ item.label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -27,6 +25,13 @@
                 <select class="form-select" name="sort">
                     {% for item in sort_items %}
                     <option value="{{ item.key }}" {% if current_sort == item.key %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <select class="form-select" name="view" data-view-select>
+                    {% for item in view_items %}
+                    <option value="{{ item.key }}" {% if current_view == item.key %}selected{% endif %}>{{ item.label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -44,7 +49,7 @@
                 <h2 class="h6 mb-3">分类导航</h2>
                 <div class="d-grid gap-2">
                     {% for item in category_items %}
-                    <a href="/?category={{ item.key }}&sort={{ current_sort }}&q={{ query }}"
+                    <a href="/?category={{ item.key }}&sort={{ current_sort }}&q={{ query }}&view={{ current_view }}"
                        class="btn btn-sm text-start category-link {% if current_category == item.key %}active{% endif %}">
                         <span>{{ item.icon }} {{ item.label }}</span>
                         <span class="badge bg-secondary-subtle text-dark">{{ category_counts.get(item.key, 0) }}</span>
@@ -60,7 +65,7 @@
                 {% if hot_tags %}
                 <div class="d-flex flex-wrap gap-2">
                     {% for tag, count in hot_tags %}
-                    <a class="badge rounded-pill text-bg-light tag-pill" href="/?q={{ tag }}">#{{ tag }} · {{ count }}</a>
+                    <a class="badge rounded-pill text-bg-light tag-pill" href="/?q={{ tag }}&view={{ current_view }}">#{{ tag }} · {{ count }}</a>
                     {% endfor %}
                 </div>
                 {% else %}
@@ -68,66 +73,113 @@
                 {% endif %}
             </div>
         </div>
-
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h6 mb-0">7天趋势榜</h2>
-                    <a href="/trending?period=7d" class="small">查看全部</a>
-                </div>
-                {% if trending_preview %}
-                <ol class="list-group list-group-numbered list-group-flush">
-                    {% for item in trending_preview %}
-                    <li class="list-group-item px-0">
-                        <a href="/resource/{{ item.id }}" class="text-decoration-none">{{ item.title }}</a>
-                        <div class="small text-secondary">下载 {{ item.downloads }}</div>
-                    </li>
-                    {% endfor %}
-                </ol>
-                {% else %}
-                <p class="text-secondary small mb-0">暂无趋势数据。</p>
-                {% endif %}
-            </div>
-        </div>
     </aside>
 
     <div class="col-xl-9">
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">🔥 7天趋势轮播</h2>
+                    <a href="/trending?period=7d" class="small">查看榜单</a>
+                </div>
+                {% if trending_preview %}
+                <div id="trendingCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3500">
+                    <div class="carousel-inner">
+                        {% for item in trending_preview %}
+                        <div class="carousel-item {% if loop.first %}active{% endif %}">
+                            <a class="trend-slide d-block text-decoration-none" href="/resource/{{ item.id }}">
+                                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                                    <div>
+                                        <h3 class="h6 mb-1 text-dark">{{ item.title }}</h3>
+                                        <p class="text-secondary small mb-2 text-truncate-2">{{ item.description or '热门资源，点击查看详情。' }}</p>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            {% for tag in item.tag_list[:4] %}
+                                            <span class="badge rounded-pill text-bg-light">#{{ tag }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="text-end small text-secondary">
+                                        <div>{{ item.category_label }}</div>
+                                        <div>下载 {{ item.downloads }}</div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#trendingCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#trendingCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                    </button>
+                </div>
+                {% else %}
+                <div class="alert alert-light border mb-0">暂无趋势数据。</div>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="card shadow-sm border-0">
             <div class="card-body pb-2">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h5 mb-0">{{ current_category_meta.icon }} {{ current_category_meta.label }}</h2>
-                    <span class="text-secondary small">{{ resources|length }} 个结果</span>
+                    <span class="text-secondary small">{{ resources|length }} 个结果 · {{ "小红书帖子" if current_view == "post" else "GitHub列表" }}</span>
                 </div>
+
                 {% if resources %}
-                <div class="list-group list-group-flush">
-                    {% for item in resources %}
-                    <div class="list-group-item px-0 resource-row">
-                        <div class="d-flex justify-content-between gap-3 flex-wrap">
-                            <div class="flex-grow-1">
-                                <h3 class="h6 mb-1">
-                                    <a href="/resource/{{ item.id }}" class="text-decoration-none">{{ item.title }}</a>
-                                </h3>
+                    {% if current_view == "post" %}
+                    <div class="post-grid">
+                        {% for item in resources %}
+                        <article class="post-card">
+                            {% if item.preview_image %}
+                            <a href="/resource/{{ item.id }}"><img src="{{ item.preview_image }}" class="post-cover" alt="{{ item.title }}"></a>
+                            {% endif %}
+                            <div class="post-body">
+                                <a href="/resource/{{ item.id }}" class="post-title text-decoration-none">{{ item.title }}</a>
                                 <p class="text-secondary small mb-2 text-truncate-2">{{ item.description or "暂无描述" }}</p>
-                                <div class="d-flex flex-wrap gap-2 mb-2">
-                                    {% for tag in item.tag_list %}
-                                    <a href="/?q={{ tag }}" class="badge rounded-pill text-bg-light tag-pill">#{{ tag }}</a>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    {% for tag in item.tag_list[:5] %}
+                                    <a href="/?q={{ tag }}&view=post" class="badge rounded-pill text-bg-light tag-pill">#{{ tag }}</a>
                                     {% endfor %}
                                 </div>
-                                <div class="small text-secondary d-flex flex-wrap gap-3">
-                                    <span>作者：{{ item.author }}</span>
-                                    <span>分类：{{ item.category_label }}</span>
-                                    <span>文件：{{ item.file_name }}</span>
-                                    <span>下载：{{ item.downloads }}</span>
+                                <div class="small text-secondary d-flex justify-content-between">
+                                    <span>{{ item.author }}</span>
+                                    <span>⬇ {{ item.downloads }}</span>
                                 </div>
                             </div>
-                            <div class="d-flex gap-2 align-items-start">
-                                <a href="/download/{{ item.id }}" class="btn btn-sm btn-warning">获取</a>
-                                <a href="/resource/{{ item.id }}" class="btn btn-sm btn-outline-dark">详情</a>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="list-group list-group-flush">
+                        {% for item in resources %}
+                        <div class="list-group-item px-0 resource-row">
+                            <div class="d-flex justify-content-between gap-3 flex-wrap">
+                                <div class="flex-grow-1">
+                                    <h3 class="h6 mb-1"><a href="/resource/{{ item.id }}" class="text-decoration-none">{{ item.title }}</a></h3>
+                                    <p class="text-secondary small mb-2 text-truncate-2">{{ item.description or "暂无描述" }}</p>
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        {% for tag in item.tag_list %}
+                                        <a href="/?q={{ tag }}&view=list" class="badge rounded-pill text-bg-light tag-pill">#{{ tag }}</a>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="small text-secondary d-flex flex-wrap gap-3">
+                                        <span>作者：{{ item.author }}</span>
+                                        <span>分类：{{ item.category_label }}</span>
+                                        <span>文件：{{ item.file_name }}</span>
+                                        <span>下载：{{ item.downloads }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 align-items-start">
+                                    <a href="/download/{{ item.id }}" class="btn btn-sm btn-warning">获取</a>
+                                    <a href="/resource/{{ item.id }}" class="btn btn-sm btn-outline-dark">详情</a>
+                                </div>
                             </div>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                </div>
+                    {% endif %}
                 {% else %}
                 <div class="alert alert-light border mb-2">没有匹配结果，去 <a href="/upload">上传资源</a> 吧。</div>
                 {% endif %}

@@ -33,6 +33,11 @@ SORT_ITEMS = [
     {"key": "popular", "label": "下载最多"},
 ]
 
+VIEW_ITEMS = [
+    {"key": "list", "label": "GitHub列表"},
+    {"key": "post", "label": "小红书帖子"},
+]
+
 TREND_PERIODS = [
     {"key": "24h", "label": "24 小时", "days": 1},
     {"key": "7d", "label": "7 天", "days": 7},
@@ -62,8 +67,10 @@ ALLOWED_EXTENSIONS = {
 CATEGORY_KEYS = {item["key"] for item in CATEGORY_ITEMS if item["key"] != "all"}
 CATEGORY_LOOKUP = {item["key"]: item for item in CATEGORY_ITEMS}
 TREND_LOOKUP = {item["key"]: item for item in TREND_PERIODS}
+SORT_KEYS = {item["key"] for item in SORT_ITEMS}
+VIEW_KEYS = {item["key"] for item in VIEW_ITEMS}
 
-app = FastAPI(title=APP_NAME, version="1.1.0")
+app = FastAPI(title=APP_NAME, version="1.2.0")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -123,19 +130,21 @@ def home(
     q: str = Query(default="", description="搜索关键词"),
     category: str = Query(default="all"),
     sort: str = Query(default="latest"),
+    view: str = Query(default="list"),
     db: Session = Depends(get_db),
 ):
     if category not in CATEGORY_LOOKUP:
         category = "all"
-    if sort not in {item["key"] for item in SORT_ITEMS}:
+    if sort not in SORT_KEYS:
         sort = "latest"
+    if view not in VIEW_KEYS:
+        view = "list"
 
     resources = crud.list_resources(db, query=q, category=category, sort=sort)
     category_counts = crud.get_category_counts(db)
-    total_count = sum(category_counts.values())
-    category_counts["all"] = total_count
+    category_counts["all"] = sum(category_counts.values())
     hot_tags = crud.list_hot_tags(db, limit=16)
-    trending_preview = crud.list_trending(db, days=7, limit=5)
+    trending_preview = crud.list_trending(db, days=7, limit=6)
     current_category_meta = CATEGORY_LOOKUP.get(category, CATEGORY_LOOKUP["all"])
 
     return templates.TemplateResponse(
@@ -146,8 +155,10 @@ def home(
             "resources": resources,
             "category_items": CATEGORY_ITEMS,
             "sort_items": SORT_ITEMS,
+            "view_items": VIEW_ITEMS,
             "current_category": category,
             "current_sort": sort,
+            "current_view": view,
             "query": q,
             "category_counts": category_counts,
             "hot_tags": hot_tags,
@@ -162,6 +173,14 @@ def category_shortcut(category_key: str):
     if category_key not in CATEGORY_KEYS:
         raise HTTPException(status_code=404, detail="分类不存在")
     return RedirectResponse(url=f"/?category={category_key}", status_code=307)
+
+
+@app.get("/settings")
+def settings_page(request: Request):
+    return templates.TemplateResponse(
+        "settings.html",
+        {"request": request, "title": f"设置 - {APP_NAME}", "view_items": VIEW_ITEMS},
+    )
 
 
 @app.get("/upload")
@@ -218,7 +237,12 @@ def upload_resource(
     if normalized_url and not normalized_url.startswith(("http://", "https://")):
         return templates.TemplateResponse(
             "message.html",
-            {"request": request, "title": "上传失败", "message": "外链地址必须以 http:// 或 https:// 开头。", "is_error": True},
+            {
+                "request": request,
+                "title": "上传失败",
+                "message": "外链地址必须以 http:// 或 https:// 开头。",
+                "is_error": True,
+            },
             status_code=400,
         )
     if not file and not normalized_url:
@@ -269,7 +293,9 @@ def resource_detail(request: Request, resource_id: int, db: Session = Depends(ge
     resource = crud.get_resource(db, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="资源不存在")
-    related_resources = [item for item in crud.list_resources(db, category=resource.category, limit=8) if item.id != resource.id][:4]
+    related_resources = [
+        item for item in crud.list_resources(db, category=resource.category, limit=8) if item.id != resource.id
+    ][:4]
     return templates.TemplateResponse(
         "detail.html",
         {"request": request, "title": resource.title, "resource": resource, "related_resources": related_resources},

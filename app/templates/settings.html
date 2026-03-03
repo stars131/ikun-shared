@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="row justify-content-center">
+    <div class="col-xl-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4 p-md-5">
+                <h1 class="h4 mb-2">显示设置</h1>
+                <p class="text-secondary mb-4">你可以在这里切换首页展示风格与趋势轮播行为。</p>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">首页默认展示模式</label>
+                    <div class="row g-2">
+                        {% for item in view_items %}
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-dark w-100 text-start setting-view-btn" data-view-value="{{ item.key }}">
+                                {{ item.label }}
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-text">`GitHub列表` 更适合检索，`小红书帖子` 更适合浏览。</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold d-block">趋势榜轮播自动播放</label>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="carouselAutoplaySwitch">
+                        <label class="form-check-label" for="carouselAutoplaySwitch">开启后首页趋势卡片会自动切换</label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-warning" id="saveDisplaySettings">保存设置</button>
+                    <a href="/" class="btn btn-outline-dark">返回首页</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
