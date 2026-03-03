@@ -1,72 +1,60 @@
-# IKUN 资源分享网站
+# IKUN Shared
 
-一个可直接部署的 `FastAPI` 资源分享站，支持上传和分享：
+一个可直接部署的 `FastAPI` 资源分享网站，支持类似 GitHub Explore 的分类浏览、趋势榜和标签化管理。
 
-- 视频
-- 歌曲
-- 图片
-- 表情包
-- 其他资源（压缩包、文档等）
+## 主要功能
 
-## 功能清单
+- GitHub 风格分类导航（视频 / 歌曲 / 图片 / 表情包 / 其他）
+- 全站搜索（标题、描述、标签、作者）
+- 趋势榜（24h / 7d / 30d / 全部）
+- 上传文件或外链资源
+- 每个文件都有标签（自动补齐分类、文件格式、外链标签）
+- 资源详情页、下载统计、同分类推荐
+- 开放 API：`/api/resources`、`/api/trending`
 
-- 首页资源展示（最新 / 热门）
-- 关键词搜索（标题、描述、标签、作者）
-- 分类筛选
-- 资源详情页
-- 文件上传 + 外链分享
-- 下载统计
-- JSON API（`/api/resources`）
-- 健康检查（`/health`）
-
-## 本地运行
-
-1. 创建虚拟环境并安装依赖
+## 本地开发运行
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-2. 启动服务
-
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-3. 访问页面
+访问：
 
 - 首页：`http://127.0.0.1:8000`
-- 上传页：`http://127.0.0.1:8000/upload`
-- API：`http://127.0.0.1:8000/api/resources`
+- 趋势榜：`http://127.0.0.1:8000/trending`
+- 上传：`http://127.0.0.1:8000/upload`
 
-## Docker 部署
-
-### 方式一：Docker Compose（推荐）
+## Docker 开发部署
 
 ```bash
 docker compose up -d --build
-```
-
-停止服务：
-
-```bash
 docker compose down
 ```
 
-### 方式二：纯 Docker
+## 生产部署配置（Nginx + Gunicorn）
+
+已提供生产配置文件：
+
+- `docker-compose.prod.yml`
+- `deploy/nginx/default.conf`
+- `.env.production.example`
+
+启动步骤：
 
 ```bash
-docker build -t ikun-share:latest .
-docker run -d --name ikun-web -p 8000:8000 ^
-  -e DATABASE_URL=sqlite:///./data/ikun.db ^
-  -v %cd%\\data:/srv/ikun/data ^
-  -v %cd%\\app\\uploads:/srv/ikun/app/uploads ^
-  ikun-share:latest
+copy .env.production.example .env
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-## 目录结构
+服务拓扑：
+
+- `ikun-app`：`gunicorn + uvicorn worker`
+- `ikun-nginx`：反向代理到 `ikun-app:8000`
+
+## 项目结构
 
 ```text
 ikun/
@@ -74,42 +62,26 @@ ikun/
 │  ├─ main.py
 │  ├─ crud.py
 │  ├─ models.py
+│  ├─ schemas.py
 │  ├─ database.py
 │  ├─ templates/
 │  ├─ static/
 │  └─ uploads/
-├─ data/                 # 运行时数据库目录（自动创建）
+├─ deploy/nginx/default.conf
 ├─ Dockerfile
 ├─ docker-compose.yml
+├─ docker-compose.prod.yml
 └─ requirements.txt
 ```
 
-## 服务器部署建议
-
-- 反向代理：`Nginx` → `ikun-web:8000`
-- 域名证书：`Let's Encrypt`
-- 上传目录与 `data/` 做持久化备份
-- 生产环境建议加鉴权、审核、CDN、防盗链与对象存储
-
-## 上传到 GitHub
-
-在当前项目目录执行：
+## 推送到 GitHub
 
 ```bash
-git init
 git add .
-git commit -m "feat: init ikun share website with docker deployment"
-git branch -M main
-git remote add origin <你的仓库地址>
-git push -u origin main
+git commit -m "feat: add github-like categories, trending, prod deploy config"
+git push
 ```
 
-如果你使用 GitHub CLI：
+## 版权声明
 
-```bash
-gh repo create <仓库名> --public --source . --remote origin --push
-```
-
-## 版权提示
-
-请确保你上传或分享的资源具备合法授权，避免侵权内容传播。平台应提供侵权投诉入口和快速下架机制。
+请仅上传具备合法授权的内容，避免侵权传播。建议在生产环境增加举报、审核和下架流程。

@@ -1,0 +1,30 @@
+services:
+  ikun-app:
+    build: .
+    container_name: ikun-app
+    restart: unless-stopped
+    command: gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 3 -b 0.0.0.0:8000 --timeout 120
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/ikun.db}
+    expose:
+      - "8000"
+    volumes:
+      - ./data:/srv/ikun/data
+      - ./app/uploads:/srv/ikun/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  ikun-nginx:
+    image: nginx:1.27-alpine
+    container_name: ikun-nginx
+    restart: unless-stopped
+    depends_on:
+      - ikun-app
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro

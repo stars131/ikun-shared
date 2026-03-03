@@ -4,9 +4,9 @@
     <section class="col-lg-8">
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="badge text-bg-warning">{{ resource.category }}</span>
-                    <small class="text-secondary">下载 {{ resource.downloads }} 次</small>
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <span class="badge text-bg-warning">{{ resource.category_label }}</span>
+                    <span class="small text-secondary">下载 {{ resource.downloads }} 次</span>
                 </div>
                 <h1 class="h3 mb-3">{{ resource.title }}</h1>
 
@@ -24,31 +24,56 @@
                 <img src="{{ resource.preview_image }}" class="img-fluid rounded mb-3 detail-preview" alt="{{ resource.title }}">
                 {% endif %}
 
-                <h2 class="h6">资源介绍</h2>
-                <p class="text-secondary">{{ resource.description or '暂无详细介绍' }}</p>
-                <p class="mb-1"><span class="text-secondary">作者：</span>{{ resource.author }}</p>
-                <p class="mb-1"><span class="text-secondary">标签：</span>{{ resource.tags or '未设置' }}</p>
-                <p class="mb-4"><span class="text-secondary">上传时间：</span>{{ resource.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p class="text-secondary">{{ resource.description or "暂无详细介绍" }}</p>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    {% for tag in resource.tag_list %}
+                    <a href="/?q={{ tag }}" class="badge rounded-pill text-bg-light tag-pill">#{{ tag }}</a>
+                    {% endfor %}
+                </div>
+                <div class="small text-secondary d-flex flex-wrap gap-3 mb-4">
+                    <span>作者：{{ resource.author }}</span>
+                    <span>文件：{{ resource.file_name }}</span>
+                    <span>上传时间：{{ resource.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
 
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="d-flex flex-wrap gap-2">
                     <a href="/download/{{ resource.id }}" class="btn btn-warning">立即获取</a>
-                    <a href="/" class="btn btn-outline-dark">返回资源大厅</a>
                     {% if resource.external_url %}
                     <a href="{{ resource.external_url }}" class="btn btn-outline-secondary" target="_blank" rel="noopener">打开外链</a>
                     {% endif %}
+                    <a href="/" class="btn btn-outline-dark">返回分类</a>
                 </div>
             </div>
         </div>
     </section>
+
     <aside class="col-lg-4">
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body">
+                <h2 class="h6 mb-3">文件标签</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for tag in resource.tag_list %}
+                    <span class="badge rounded-pill text-bg-light">#{{ tag }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
         <div class="card shadow-sm border-0">
             <div class="card-body">
-                <h2 class="h6 mb-3">分享建议</h2>
-                <ul class="mb-0 text-secondary">
-                    <li>优先上传高清版本资源。</li>
-                    <li>补充清晰标签方便检索。</li>
-                    <li>请确认资源来源与授权信息。</li>
-                </ul>
+                <h2 class="h6 mb-3">同分类推荐</h2>
+                {% if related_resources %}
+                <div class="list-group list-group-flush">
+                    {% for item in related_resources %}
+                    <a href="/resource/{{ item.id }}" class="list-group-item list-group-item-action px-0">
+                        <div class="fw-semibold small mb-1">{{ item.title }}</div>
+                        <div class="text-secondary small">下载 {{ item.downloads }} · {{ item.category_label }}</div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-secondary small mb-0">暂无可推荐资源。</p>
+                {% endif %}
             </div>
         </div>
     </aside>

@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -9,20 +10,34 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from . import crud, models, schemas
+from . import crud, schemas
 from .database import Base, engine, get_db
+from .models import CATEGORY_LABELS
 
-APP_NAME = "IKUN 资源分享站"
+APP_NAME = "IKUN Shared"
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 DATA_DIR = BASE_DIR.parent / "data"
 
-CATEGORIES = [
-    ("video", "视频"),
-    ("song", "歌曲"),
-    ("image", "图片"),
-    ("meme", "表情包"),
-    ("other", "其他资源"),
+CATEGORY_ITEMS = [
+    {"key": "all", "label": "全部", "icon": "📁", "description": "全部资源"},
+    {"key": "video", "label": "视频", "icon": "🎬", "description": "演出、剪辑、鬼畜视频"},
+    {"key": "song", "label": "歌曲", "icon": "🎵", "description": "音频、伴奏、翻唱作品"},
+    {"key": "image", "label": "图片", "icon": "🖼️", "description": "海报、截图、摄影图"},
+    {"key": "meme", "label": "表情包", "icon": "😂", "description": "梗图、表情包、贴纸"},
+    {"key": "other", "label": "其他", "icon": "📦", "description": "压缩包、文档、素材"},
+]
+
+SORT_ITEMS = [
+    {"key": "latest", "label": "最近更新"},
+    {"key": "popular", "label": "下载最多"},
+]
+
+TREND_PERIODS = [
+    {"key": "24h", "label": "24 小时", "days": 1},
+    {"key": "7d", "label": "7 天", "days": 7},
+    {"key": "30d", "label": "30 天", "days": 30},
+    {"key": "all", "label": "全部时间", "days": None},
 ]
 
 ALLOWED_EXTENSIONS = {
@@ -44,7 +59,11 @@ ALLOWED_EXTENSIONS = {
     ".pdf",
 }
 
-app = FastAPI(title=APP_NAME, version="1.0.0")
+CATEGORY_KEYS = {item["key"] for item in CATEGORY_ITEMS if item["key"] != "all"}
+CATEGORY_LOOKUP = {item["key"]: item for item in CATEGORY_ITEMS}
+TREND_LOOKUP = {item["key"]: item for item in TREND_PERIODS}
+
+app = FastAPI(title=APP_NAME, version="1.1.0")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -53,6 +72,43 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 def ensure_dirs():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def category_label(category_key: str) -> str:
+    return CATEGORY_LABELS.get(category_key, category_key)
+
+
+def split_tags(raw_tags: str) -> list[str]:
+    values = re.split(r"[,\s，#]+", raw_tags or "")
+    tags: list[str] = []
+    seen = set()
+    for value in values:
+        tag = value.strip()
+        if not tag:
+            continue
+        lowered = tag.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        tags.append(tag)
+    return tags
+
+
+def normalize_tags(raw_tags: str, category: str, file_name: str = "", external: bool = False) -> str:
+    tags = split_tags(raw_tags)
+    default_tags = [category_label(category)]
+    suffix = Path(file_name).suffix.lower().replace(".", "").strip()
+    if suffix:
+        default_tags.append(suffix)
+    if external:
+        default_tags.append("外链")
+    for tag in default_tags:
+        if tag.lower() not in {existing.lower() for existing in tags}:
+            tags.append(tag)
+    return ", ".join(tags[:8])
+
+
+templates.env.globals["category_label"] = category_label
 
 
 @app.on_event("startup")
@@ -69,26 +125,50 @@ def home(
     sort: str = Query(default="latest"),
     db: Session = Depends(get_db),
 ):
+    if category not in CATEGORY_LOOKUP:
+        category = "all"
+    if sort not in {item["key"] for item in SORT_ITEMS}:
+        sort = "latest"
+
     resources = crud.list_resources(db, query=q, category=category, sort=sort)
+    category_counts = crud.get_category_counts(db)
+    total_count = sum(category_counts.values())
+    category_counts["all"] = total_count
+    hot_tags = crud.list_hot_tags(db, limit=16)
+    trending_preview = crud.list_trending(db, days=7, limit=5)
+    current_category_meta = CATEGORY_LOOKUP.get(category, CATEGORY_LOOKUP["all"])
+
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "title": APP_NAME,
             "resources": resources,
-            "categories": CATEGORIES,
+            "category_items": CATEGORY_ITEMS,
+            "sort_items": SORT_ITEMS,
             "current_category": category,
             "current_sort": sort,
             "query": q,
+            "category_counts": category_counts,
+            "hot_tags": hot_tags,
+            "trending_preview": trending_preview,
+            "current_category_meta": current_category_meta,
         },
     )
+
+
+@app.get("/categories/{category_key}")
+def category_shortcut(category_key: str):
+    if category_key not in CATEGORY_KEYS:
+        raise HTTPException(status_code=404, detail="分类不存在")
+    return RedirectResponse(url=f"/?category={category_key}", status_code=307)
 
 
 @app.get("/upload")
 def upload_page(request: Request):
     return templates.TemplateResponse(
         "upload.html",
-        {"request": request, "title": f"上传资源 - {APP_NAME}", "categories": CATEGORIES},
+        {"request": request, "title": f"上传资源 - {APP_NAME}", "category_items": CATEGORY_ITEMS[1:]},
     )
 
 
@@ -121,18 +201,27 @@ def upload_resource(
     preview_image: Optional[UploadFile] = File(default=None),
     db: Session = Depends(get_db),
 ):
-    if category not in dict(CATEGORIES):
+    safe_title = title.strip()
+    if not safe_title:
         return templates.TemplateResponse(
             "message.html",
-            {
-                "request": request,
-                "title": "上传失败",
-                "message": "分类非法，请重新选择。",
-                "is_error": True,
-            },
+            {"request": request, "title": "上传失败", "message": "标题不能为空。", "is_error": True},
             status_code=400,
         )
-    if not file and not external_url.strip():
+    if category not in CATEGORY_KEYS:
+        return templates.TemplateResponse(
+            "message.html",
+            {"request": request, "title": "上传失败", "message": "分类非法，请重新选择。", "is_error": True},
+            status_code=400,
+        )
+    normalized_url = external_url.strip()
+    if normalized_url and not normalized_url.startswith(("http://", "https://")):
+        return templates.TemplateResponse(
+            "message.html",
+            {"request": request, "title": "上传失败", "message": "外链地址必须以 http:// 或 https:// 开头。", "is_error": True},
+            status_code=400,
+        )
+    if not file and not normalized_url:
         return templates.TemplateResponse(
             "message.html",
             {
@@ -146,6 +235,7 @@ def upload_resource(
 
     file_path = ""
     preview_path = ""
+    source_file_name = file.filename if file else ""
     try:
         if file:
             file_path = _save_upload_file(file, UPLOAD_DIR)
@@ -161,12 +251,12 @@ def upload_resource(
         preview_path = file_path
 
     payload = schemas.ResourceCreate(
-        title=title.strip(),
+        title=safe_title,
         description=description.strip(),
         category=category,
-        tags=tags.strip(),
+        tags=normalize_tags(tags, category, source_file_name, external=bool(normalized_url)),
         author=author.strip() or "匿名用户",
-        external_url=external_url.strip(),
+        external_url=normalized_url,
         file_path=file_path,
         preview_image=preview_path,
     )
@@ -179,9 +269,10 @@ def resource_detail(request: Request, resource_id: int, db: Session = Depends(ge
     resource = crud.get_resource(db, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="资源不存在")
+    related_resources = [item for item in crud.list_resources(db, category=resource.category, limit=8) if item.id != resource.id][:4]
     return templates.TemplateResponse(
         "detail.html",
-        {"request": request, "title": resource.title, "resource": resource, "categories": CATEGORIES},
+        {"request": request, "title": resource.title, "resource": resource, "related_resources": related_resources},
     )
 
 
@@ -197,9 +288,28 @@ def download_resource(resource_id: int, db: Session = Depends(get_db)):
     if resource.file_path:
         local_path = BASE_DIR / resource.file_path.lstrip("/").replace("/", os.sep)
         if local_path.exists():
-            filename = local_path.name
-            return FileResponse(path=str(local_path), filename=filename)
+            return FileResponse(path=str(local_path), filename=local_path.name)
     raise HTTPException(status_code=404, detail="文件不存在")
+
+
+@app.get("/trending")
+def trending_page(
+    request: Request,
+    period: str = Query(default="7d"),
+    db: Session = Depends(get_db),
+):
+    current_period = TREND_LOOKUP.get(period, TREND_LOOKUP["7d"])
+    resources = crud.list_trending(db, days=current_period["days"], limit=50)
+    return templates.TemplateResponse(
+        "trending.html",
+        {
+            "request": request,
+            "title": f"趋势榜 - {APP_NAME}",
+            "resources": resources,
+            "period_items": TREND_PERIODS,
+            "current_period": current_period["key"],
+        },
+    )
 
 
 @app.get("/api/resources", response_model=list[schemas.ResourceOut])
@@ -210,6 +320,15 @@ def api_resources(
     db: Session = Depends(get_db),
 ):
     return crud.list_resources(db, query=q, category=category, sort=sort, limit=100)
+
+
+@app.get("/api/trending", response_model=list[schemas.ResourceOut])
+def api_trending(
+    period: str = Query(default="7d"),
+    db: Session = Depends(get_db),
+):
+    days = TREND_LOOKUP.get(period, TREND_LOOKUP["7d"])["days"]
+    return crud.list_trending(db, days=days, limit=50)
 
 
 @app.get("/health")
