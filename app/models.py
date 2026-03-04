@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 
 from .database import Base
 
@@ -63,3 +63,17 @@ class Resource(Base):
         if not tags:
             tags.append(self.category_label)
         return tags[:8]
+
+
+class ResourceReaction(Base):
+    __tablename__ = "resource_reactions"
+    __table_args__ = (
+        UniqueConstraint("resource_id", "client_token", "action", "day_key", name="uq_resource_reaction_daily"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    resource_id = Column(Integer, ForeignKey("resources.id", ondelete="CASCADE"), index=True, nullable=False)
+    client_token = Column(String(64), index=True, nullable=False)
+    action = Column(String(20), index=True, nullable=False)
+    day_key = Column(String(10), index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)

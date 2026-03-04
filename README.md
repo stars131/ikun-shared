@@ -1,36 +1,43 @@
 # IKUN Shared
 
-一个可直接部署的 `FastAPI` 资源分享网站，支持类似 GitHub Explore 的分类浏览、趋势榜和标签化管理。
+一个可部署的 `FastAPI` 资源分享网站，支持 GitHub 风格分类、趋势榜、小红书帖子流和互动功能。
 
 ## 主要功能
 
 - GitHub 风格分类导航（视频 / 歌曲 / 图片 / 表情包 / 其他）
-- 全站搜索（标题、描述、标签、作者）
+- 搜索与筛选（标题、描述、标签、作者）
 - 趋势榜（24h / 7d / 30d / 全部）
-- 首页趋势轮播卡片（可在设置中开关自动播放）
-- 小红书帖子流模式（可在设置中切换默认展示）
-- 帖子封面按图片比例自适应裁剪（横图/方图/竖图）
-- 点赞与收藏按钮（实时计数）
-- 上传文件或外链资源
-- 每个文件都有标签（自动补齐分类、文件格式、外链标签）
-- 资源详情页、下载统计、同分类推荐
-- 开放 API：`/api/resources`、`/api/trending`
+- 首页趋势轮播（支持设置开关自动播放）
+- 小红书帖子模式（支持设置为默认视图）
+- 帖子封面按比例自适应裁剪（横图 / 方图 / 竖图）
+- 点赞与收藏（实时计数）
+- 点赞/收藏去重（同一设备每天同资源同动作仅一次）
+- 上传文件或外链，自动补齐文件标签
 
-## 本地开发运行
+## 本地开发
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-访问：
+访问地址：
 
 - 首页：`http://127.0.0.1:8000`
 - 趋势榜：`http://127.0.0.1:8000/trending`
-- 上传：`http://127.0.0.1:8000/upload`
-- 设置：`http://127.0.0.1:8000/settings`
+- 上传页：`http://127.0.0.1:8000/upload`
+- 设置页：`http://127.0.0.1:8000/settings`
+
+## 数据库迁移（Alembic）
+
+```bash
+alembic upgrade head
+```
+
+当前迁移文件：`alembic/versions/20260304_0001_reactions_migration.py`
 
 ## Docker 开发部署
 
@@ -39,25 +46,26 @@ docker compose up -d --build
 docker compose down
 ```
 
-## 生产部署配置（Nginx + Gunicorn）
+容器启动会自动执行：
 
-已提供生产配置文件：
+```bash
+alembic upgrade head
+```
+
+## 生产部署（Nginx + Gunicorn）
+
+已提供：
 
 - `docker-compose.prod.yml`
 - `deploy/nginx/default.conf`
 - `.env.production.example`
 
-启动步骤：
+启动：
 
 ```bash
 copy .env.production.example .env
 docker compose -f docker-compose.prod.yml up -d --build
 ```
-
-服务拓扑：
-
-- `ikun-app`：`gunicorn + uvicorn worker`
-- `ikun-nginx`：反向代理到 `ikun-app:8000`
 
 ## 项目结构
 
@@ -65,13 +73,16 @@ docker compose -f docker-compose.prod.yml up -d --build
 ikun/
 ├─ app/
 │  ├─ main.py
-│  ├─ crud.py
 │  ├─ models.py
+│  ├─ crud.py
 │  ├─ schemas.py
-│  ├─ database.py
 │  ├─ templates/
 │  ├─ static/
+│  │  └─ js/
 │  └─ uploads/
+├─ alembic/
+│  └─ versions/
+├─ alembic.ini
 ├─ deploy/nginx/default.conf
 ├─ Dockerfile
 ├─ docker-compose.yml
@@ -83,10 +94,10 @@ ikun/
 
 ```bash
 git add .
-git commit -m "feat: add github-like categories, trending, prod deploy config"
+git commit -m "feat: improve reactions, migrations, and UX"
 git push
 ```
 
-## 版权声明
+## 版权说明
 
-请仅上传具备合法授权的内容，避免侵权传播。建议在生产环境增加举报、审核和下架流程。
+请仅上传合法授权内容，建议生产环境开启举报、审核、下架流程。

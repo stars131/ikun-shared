@@ -1,11 +1,12 @@
 import os
 import re
+import secrets
 import uuid
 from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import inspect, text
@@ -70,6 +71,8 @@ CATEGORY_LOOKUP = {item["key"]: item for item in CATEGORY_ITEMS}
 TREND_LOOKUP = {item["key"]: item for item in TREND_PERIODS}
 SORT_KEYS = {item["key"] for item in SORT_ITEMS}
 VIEW_KEYS = {item["key"] for item in VIEW_ITEMS}
+CLIENT_TOKEN_COOKIE = "ikun_client_token"
+CLIENT_TOKEN_MAX_AGE = 60 * 60 * 24 * 365
 
 app = FastAPI(title=APP_NAME, version="1.2.0")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -82,16 +85,40 @@ def ensure_dirs():
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def ensure_resource_columns():
+def ensure_schema_fallback():
     inspector = inspect(engine)
-    if "resources" not in inspector.get_table_names():
+    if "resources" in inspector.get_table_names():
+        column_names = {column["name"] for column in inspector.get_columns("resources")}
+        with engine.begin() as connection:
+            if "likes" not in column_names:
+                connection.execute(text("ALTER TABLE resources ADD COLUMN likes INTEGER DEFAULT 0"))
+            if "favorites" not in column_names:
+                connection.execute(text("ALTER TABLE resources ADD COLUMN favorites INTEGER DEFAULT 0"))
+    Base.metadata.tables["resource_reactions"].create(bind=engine, checkfirst=True)
+
+
+def run_alembic_migrations():
+    try:
+        from alembic import command as alembic_command
+        from alembic.config import Config
+    except Exception:
+        ensure_schema_fallback()
         return
-    column_names = {column["name"] for column in inspector.get_columns("resources")}
-    with engine.begin() as connection:
-        if "likes" not in column_names:
-            connection.execute(text("ALTER TABLE resources ADD COLUMN likes INTEGER DEFAULT 0"))
-        if "favorites" not in column_names:
-            connection.execute(text("ALTER TABLE resources ADD COLUMN favorites INTEGER DEFAULT 0"))
+
+    try:
+        config = Config(str(BASE_DIR.parent / "alembic.ini"))
+        config.set_main_option("script_location", str(BASE_DIR.parent / "alembic"))
+        config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL", "sqlite:///./data/ikun.db"))
+        alembic_command.upgrade(config, "head")
+    except Exception:
+        ensure_schema_fallback()
+
+
+def get_or_create_client_token(request: Request) -> tuple[str, bool]:
+    token = request.cookies.get(CLIENT_TOKEN_COOKIE, "").strip()
+    if token and len(token) >= 16:
+        return token[:64], False
+    return secrets.token_hex(16), True
 
 
 def category_label(category_key: str) -> str:
@@ -135,7 +162,7 @@ templates.env.globals["category_label"] = category_label
 def on_startup():
     ensure_dirs()
     Base.metadata.create_all(bind=engine)
-    ensure_resource_columns()
+    run_alembic_migrations()
 
 
 @app.get("/")
@@ -353,21 +380,59 @@ def trending_page(
 
 
 @app.post("/api/resources/{resource_id}/like")
-def like_resource(resource_id: int, db: Session = Depends(get_db)):
+def like_resource(request: Request, resource_id: int, db: Session = Depends(get_db)):
     resource = crud.get_resource(db, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="资源不存在")
-    updated = crud.increase_like(db, resource)
-    return {"resource_id": updated.id, "likes": updated.likes, "favorites": updated.favorites}
+    client_token, is_new_cookie = get_or_create_client_token(request)
+    accepted, updated = crud.register_reaction(db, resource, client_token, "like")
+    response = JSONResponse(
+        {
+            "resource_id": updated.id,
+            "likes": updated.likes,
+            "favorites": updated.favorites,
+            "accepted": accepted,
+            "message": "点赞成功" if accepted else "今天已经点赞过了",
+        }
+    )
+    if is_new_cookie:
+        response.set_cookie(
+            key=CLIENT_TOKEN_COOKIE,
+            value=client_token,
+            max_age=CLIENT_TOKEN_MAX_AGE,
+            httponly=True,
+            samesite="lax",
+            secure=False,
+        )
+    return response
 
 
 @app.post("/api/resources/{resource_id}/favorite")
-def favorite_resource(resource_id: int, db: Session = Depends(get_db)):
+def favorite_resource(request: Request, resource_id: int, db: Session = Depends(get_db)):
     resource = crud.get_resource(db, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="资源不存在")
-    updated = crud.increase_favorite(db, resource)
-    return {"resource_id": updated.id, "likes": updated.likes, "favorites": updated.favorites}
+    client_token, is_new_cookie = get_or_create_client_token(request)
+    accepted, updated = crud.register_reaction(db, resource, client_token, "favorite")
+    response = JSONResponse(
+        {
+            "resource_id": updated.id,
+            "likes": updated.likes,
+            "favorites": updated.favorites,
+            "accepted": accepted,
+            "message": "收藏成功" if accepted else "今天已经收藏过了",
+        }
+    )
+    if is_new_cookie:
+        response.set_cookie(
+            key=CLIENT_TOKEN_COOKIE,
+            value=client_token,
+            max_age=CLIENT_TOKEN_MAX_AGE,
+            httponly=True,
+            samesite="lax",
+            secure=False,
+        )
+    return response
 
 
 @app.get("/api/resources", response_model=list[schemas.ResourceOut])

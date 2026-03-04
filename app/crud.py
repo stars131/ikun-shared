@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy import desc, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .models import Resource
+from .models import Resource, ResourceReaction
 from .schemas import ResourceCreate
 
 
@@ -114,3 +115,47 @@ def increase_favorite(db: Session, resource: Resource) -> Resource:
     db.commit()
     db.refresh(resource)
     return resource
+
+
+def register_reaction(
+    db: Session,
+    resource: Resource,
+    client_token: str,
+    action: str,
+) -> tuple[bool, Resource]:
+    day_key = datetime.utcnow().strftime("%Y-%m-%d")
+    exists = (
+        db.query(ResourceReaction.id)
+        .filter(
+            ResourceReaction.resource_id == resource.id,
+            ResourceReaction.client_token == client_token,
+            ResourceReaction.action == action,
+            ResourceReaction.day_key == day_key,
+        )
+        .first()
+    )
+    if exists:
+        return False, resource
+
+    reaction = ResourceReaction(
+        resource_id=resource.id,
+        client_token=client_token,
+        action=action,
+        day_key=day_key,
+    )
+    db.add(reaction)
+    if action == "like":
+        resource.likes += 1
+    elif action == "favorite":
+        resource.favorites += 1
+    else:
+        raise ValueError(f"Unsupported reaction action: {action}")
+    db.add(resource)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        db.refresh(resource)
+        return False, resource
+    db.refresh(resource)
+    return True, resource

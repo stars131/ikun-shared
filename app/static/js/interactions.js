@@ -1,4 +1,21 @@
 (() => {
+    const showInteractionTip = (message, isWarning = false) => {
+        if (!message) {
+            return;
+        }
+        let tip = document.getElementById("interaction-tip");
+        if (!tip) {
+            tip = document.createElement("div");
+            tip.id = "interaction-tip";
+            tip.className = "interaction-tip";
+            document.body.appendChild(tip);
+        }
+        tip.textContent = message;
+        tip.classList.toggle("warning", isWarning);
+        tip.classList.add("show");
+        window.setTimeout(() => tip.classList.remove("show"), 1800);
+    };
+
     const updateReactionCounters = (resourceId, likes, favorites) => {
         const boxes = document.querySelectorAll(".resource-reactions");
         boxes.forEach((box) => {
@@ -12,6 +29,17 @@
             }
             if (favoriteCounter) {
                 favoriteCounter.textContent = String(favorites);
+            }
+        });
+        const summaryBlocks = document.querySelectorAll(`[data-resource-summary="${resourceId}"]`);
+        summaryBlocks.forEach((summary) => {
+            const likeSummary = summary.querySelector('[data-role="summary-like"]');
+            const favoriteSummary = summary.querySelector('[data-role="summary-favorite"]');
+            if (likeSummary) {
+                likeSummary.textContent = String(likes);
+            }
+            if (favoriteSummary) {
+                favoriteSummary.textContent = String(favorites);
             }
         });
     };
@@ -38,8 +66,10 @@
                 }
                 const data = await response.json();
                 updateReactionCounters(data.resource_id, data.likes, data.favorites);
+                showInteractionTip(data.message || "操作成功", !data.accepted);
             } catch (error) {
                 console.error(error);
+                showInteractionTip("操作失败，请稍后重试", true);
             } finally {
                 button.disabled = false;
             }
