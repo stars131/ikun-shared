@@ -9,7 +9,8 @@
                 <form method="post" action="/upload" enctype="multipart/form-data" class="row g-3">
                     <div class="col-md-8">
                         <label class="form-label">标题 *</label>
-                        <input type="text" name="title" class="form-control" maxlength="200" required>
+                        <input type="text" name="title" id="titleInput" class="form-control" maxlength="200" required>
+                        <div class="form-text"><span id="titleCharCount">0</span>/200</div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">分类 *</label>
@@ -38,10 +39,14 @@
                     <div class="col-md-6">
                         <label class="form-label">上传文件（可选）</label>
                         <input type="file" name="file" class="form-control">
+                        <div class="form-text">支持 MP4/MP3/JPG/PNG/GIF/ZIP 等，最大 200MB</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">封面图（可选）</label>
-                        <input type="file" name="preview_image" class="form-control">
+                        <input type="file" name="preview_image" id="coverInput" class="form-control" accept="image/*">
+                        <div id="coverPreview" class="mt-2" style="display:none;">
+                            <img id="coverThumb" src="" alt="封面预览" style="max-height:120px;border-radius:8px;border:1px solid #d0d7de;">
+                        </div>
                     </div>
                     <div class="col-12">
                         <div class="form-check">
@@ -60,4 +65,36 @@
         </div>
     </div>
 </section>
+
+<script>
+(function() {
+    var titleInput = document.getElementById('titleInput');
+    var charCount = document.getElementById('titleCharCount');
+    if (titleInput && charCount) {
+        titleInput.addEventListener('input', function() {
+            charCount.textContent = titleInput.value.length;
+        });
+    }
+
+    var coverInput = document.getElementById('coverInput');
+    var coverPreview = document.getElementById('coverPreview');
+    var coverThumb = document.getElementById('coverThumb');
+    if (coverInput && coverPreview && coverThumb) {
+        coverInput.addEventListener('change', function() {
+            var file = coverInput.files[0];
+            if (file && file.type.startsWith('image/')) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    coverThumb.src = e.target.result;
+                    coverPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                coverPreview.style.display = 'none';
+                coverThumb.src = '';
+            }
+        });
+    }
+})();
+</script>
 {% endblock %}

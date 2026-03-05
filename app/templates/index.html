@@ -11,31 +11,31 @@
 
     <form method="get" action="/" class="card border-0 shadow-sm p-3">
         <div class="row g-2 align-items-center">
-            <div class="col-lg-4">
+            <div class="col-md-6 col-lg-4">
                 <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="搜索标题 / 标签 / 作者">
             </div>
-            <div class="col-lg-2">
+            <div class="col-6 col-md-3 col-lg-2">
                 <select class="form-select" name="category">
                     {% for item in category_items %}
                     <option value="{{ item.key }}" {% if current_category == item.key %}selected{% endif %}>{{ item.icon }} {{ item.label }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-lg-2">
+            <div class="col-6 col-md-3 col-lg-2">
                 <select class="form-select" name="sort">
                     {% for item in sort_items %}
                     <option value="{{ item.key }}" {% if current_sort == item.key %}selected{% endif %}>{{ item.label }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-lg-2">
+            <div class="col-6 col-md-3 col-lg-2">
                 <select class="form-select" name="view" data-view-select>
                     {% for item in view_items %}
                     <option value="{{ item.key }}" {% if current_view == item.key %}selected{% endif %}>{{ item.label }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-lg-2 d-grid">
+            <div class="col-6 col-md-3 col-lg-2 d-grid">
                 <button class="btn btn-dark" type="submit">筛选</button>
             </div>
         </div>
@@ -52,7 +52,7 @@
                     <a href="/?category={{ item.key }}&sort={{ current_sort }}&q={{ query }}&view={{ current_view }}"
                        class="btn btn-sm text-start category-link {% if current_category == item.key %}active{% endif %}">
                         <span>{{ item.icon }} {{ item.label }}</span>
-                        <span class="badge bg-secondary-subtle text-dark">{{ category_counts.get(item.key, 0) }}</span>
+                        <span class="badge bg-dark text-white">{{ category_counts.get(item.key, 0) }}</span>
                     </a>
                     {% endfor %}
                 </div>
@@ -83,7 +83,7 @@
                     <a href="/trending?period=7d" class="small">查看榜单</a>
                 </div>
                 {% if trending_preview %}
-                <div id="trendingCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3500">
+                <div id="trendingCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="6000">
                     <div class="carousel-inner">
                         {% for item in trending_preview %}
                         <div class="carousel-item {% if loop.first %}active{% endif %}">
@@ -124,7 +124,7 @@
             <div class="card-body pb-2">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h5 mb-0">{{ current_category_meta.icon }} {{ current_category_meta.label }}</h2>
-                    <span class="text-secondary small">{{ resources|length }} 个结果 · {{ "小红书帖子" if current_view == "post" else "GitHub列表" }}</span>
+                    <span class="text-secondary small">{{ total }} 个结果 · {{ "小红书帖子" if current_view == "post" else "GitHub列表" }}</span>
                 </div>
 
                 {% if resources %}
@@ -203,6 +203,28 @@
                         </div>
                         {% endfor %}
                     </div>
+                    {% endif %}
+
+                    {% if total_pages > 1 %}
+                    <nav class="mt-3" aria-label="分页导航">
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                                <a class="page-link" href="/?page={{ page - 1 }}&category={{ current_category }}&sort={{ current_sort }}&view={{ current_view }}&q={{ query }}">上一页</a>
+                            </li>
+                            {% for p in range(1, total_pages + 1) %}
+                                {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" href="/?page={{ p }}&category={{ current_category }}&sort={{ current_sort }}&view={{ current_view }}&q={{ query }}">{{ p }}</a>
+                            </li>
+                                {% elif p == page - 3 or p == page + 3 %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="/?page={{ page + 1 }}&category={{ current_category }}&sort={{ current_sort }}&view={{ current_view }}&q={{ query }}">下一页</a>
+                            </li>
+                        </ul>
+                    </nav>
                     {% endif %}
                 {% else %}
                 <div class="alert alert-light border mb-2">没有匹配结果，去 <a href="/upload">上传资源</a> 吧。</div>

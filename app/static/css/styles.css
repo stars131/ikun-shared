@@ -1,5 +1,14 @@
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     background: #f6f8fa;
+}
+
+*:focus-visible {
+    outline: 2px solid #0969da;
+    outline-offset: 2px;
 }
 
 .card {
@@ -28,6 +37,11 @@ body {
 
 .resource-row {
     border-bottom: 1px solid #d8dee4;
+    transition: background-color 0.15s ease;
+}
+
+.resource-row:hover {
+    background-color: #f6f8fa;
 }
 
 .resource-row:last-child {
@@ -47,18 +61,32 @@ body {
     width: 100%;
     object-fit: contain;
     background: #0d1117;
+    border-radius: 8px;
+    border: 1px solid #30363d;
 }
 
 .tag-pill {
     text-decoration: none;
     border: 1px solid #d0d7de;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.tag-pill:hover {
+    border-color: #0969da;
+    background-color: #dbeafe !important;
 }
 
 .trend-slide {
     border: 1px solid #d0d7de;
+    border-left: 4px solid #0969da;
     border-radius: 12px;
     padding: 14px;
     background: linear-gradient(140deg, #ffffff, #eef5ff);
+    transition: border-left-color 0.2s ease;
+}
+
+.trend-slide:hover {
+    border-left-color: #f59e0b;
 }
 
 #trendingCarousel .carousel-control-prev-icon,
@@ -80,6 +108,30 @@ body {
     border-radius: 14px;
     background: #fff;
     overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: fadeSlideUp 0.4s ease both;
+}
+
+.post-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.post-card:nth-child(2) { animation-delay: 0.05s; }
+.post-card:nth-child(3) { animation-delay: 0.1s; }
+.post-card:nth-child(4) { animation-delay: 0.15s; }
+.post-card:nth-child(5) { animation-delay: 0.2s; }
+.post-card:nth-child(6) { animation-delay: 0.25s; }
+
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .post-media {
@@ -142,6 +194,16 @@ body {
     min-width: 70px;
 }
 
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.interaction-pulse {
+    animation: pulse 0.4s ease;
+}
+
 .interaction-tip {
     position: fixed;
     left: 50%;
@@ -165,6 +227,14 @@ body {
 .interaction-tip.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+
+.trending-row {
+    transition: background-color 0.15s ease;
+}
+
+.trending-row:hover {
+    background-color: #f6f8fa;
 }
 
 @media (max-width: 992px) {

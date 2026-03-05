@@ -49,6 +49,37 @@ def list_resources(
     return statement.limit(limit).all()
 
 
+def list_resources_paginated(
+    db: Session,
+    query: str = "",
+    category: str = "",
+    sort: str = "latest",
+    page: int = 1,
+    per_page: int = 20,
+) -> tuple[list[Resource], int]:
+    statement = db.query(Resource)
+    if query:
+        pattern = f"%{query.strip()}%"
+        statement = statement.filter(
+            or_(
+                Resource.title.ilike(pattern),
+                Resource.description.ilike(pattern),
+                Resource.tags.ilike(pattern),
+                Resource.author.ilike(pattern),
+            )
+        )
+    if category and category != "all":
+        statement = statement.filter(Resource.category == category)
+    if sort == "popular":
+        statement = statement.order_by(desc(Resource.downloads), desc(Resource.created_at))
+    else:
+        statement = statement.order_by(desc(Resource.created_at))
+    total = statement.count()
+    offset = (page - 1) * per_page
+    items = statement.offset(offset).limit(per_page).all()
+    return items, total
+
+
 def _trend_score(resource: Resource, now: datetime, window_days: int) -> float:
     age_days = max(0.0, (now - resource.created_at).total_seconds() / 86400.0)
     freshness_bonus = max(0.0, window_days - age_days)

@@ -10,15 +10,19 @@
                 <div class="mb-4">
                     <label class="form-label fw-semibold">首页默认展示模式</label>
                     <div class="row g-2">
-                        {% for item in view_items %}
                         <div class="col-md-6">
-                            <button type="button" class="btn btn-outline-dark w-100 text-start setting-view-btn" data-view-value="{{ item.key }}">
-                                {{ item.label }}
+                            <button type="button" class="btn btn-outline-dark w-100 text-start setting-view-btn p-3" data-view-value="list">
+                                <div class="fw-semibold">GitHub列表</div>
+                                <div class="small text-secondary mt-1">紧凑的列表布局，适合快速检索和浏览大量资源</div>
                             </button>
                         </div>
-                        {% endfor %}
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-dark w-100 text-start setting-view-btn p-3" data-view-value="post">
+                                <div class="fw-semibold">小红书帖子</div>
+                                <div class="small text-secondary mt-1">瀑布流卡片布局，适合浏览图片和封面类资源</div>
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-text">`GitHub列表` 更适合检索，`小红书帖子` 更适合浏览。</div>
                 </div>
 
                 <div class="mb-4">

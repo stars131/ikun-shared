@@ -1,7 +1,9 @@
+import math
 import os
 import re
 import secrets
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -73,11 +75,6 @@ SORT_KEYS = {item["key"] for item in SORT_ITEMS}
 VIEW_KEYS = {item["key"] for item in VIEW_ITEMS}
 CLIENT_TOKEN_COOKIE = "ikun_client_token"
 CLIENT_TOKEN_MAX_AGE = 60 * 60 * 24 * 365
-
-app = FastAPI(title=APP_NAME, version="1.2.0")
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
-app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
 def ensure_dirs():
@@ -155,14 +152,19 @@ def normalize_tags(raw_tags: str, category: str, file_name: str = "", external: 
     return ", ".join(tags[:8])
 
 
-templates.env.globals["category_label"] = category_label
-
-
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(app):
     ensure_dirs()
     Base.metadata.create_all(bind=engine)
     run_alembic_migrations()
+    yield
+
+
+app = FastAPI(title=APP_NAME, version="1.3.0", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+templates.env.globals["category_label"] = category_label
 
 
 @app.get("/")
@@ -172,6 +174,7 @@ def home(
     category: str = Query(default="all"),
     sort: str = Query(default="latest"),
     view: str = Query(default="list"),
+    page: int = Query(default=1, ge=1),
     db: Session = Depends(get_db),
 ):
     if category not in CATEGORY_LOOKUP:
@@ -181,7 +184,13 @@ def home(
     if view not in VIEW_KEYS:
         view = "list"
 
-    resources = crud.list_resources(db, query=q, category=category, sort=sort)
+    per_page = 20
+    resources, total = crud.list_resources_paginated(
+        db, query=q, category=category, sort=sort, page=page, per_page=per_page
+    )
+    total_pages = max(1, math.ceil(total / per_page))
+    if page > total_pages:
+        page = total_pages
     category_counts = crud.get_category_counts(db)
     category_counts["all"] = sum(category_counts.values())
     hot_tags = crud.list_hot_tags(db, limit=16)
@@ -205,6 +214,9 @@ def home(
             "hot_tags": hot_tags,
             "trending_preview": trending_preview,
             "current_category_meta": current_category_meta,
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
         },
     )
 
@@ -339,7 +351,13 @@ def resource_detail(request: Request, resource_id: int, db: Session = Depends(ge
     ][:4]
     return templates.TemplateResponse(
         "detail.html",
-        {"request": request, "title": resource.title, "resource": resource, "related_resources": related_resources},
+        {
+            "request": request,
+            "title": resource.title,
+            "resource": resource,
+            "related_resources": related_resources,
+            "category_lookup": CATEGORY_LOOKUP,
+        },
     )
 
 
@@ -379,48 +397,26 @@ def trending_page(
     )
 
 
-@app.post("/api/resources/{resource_id}/like")
-def like_resource(request: Request, resource_id: int, db: Session = Depends(get_db)):
+ACTION_LABELS = {"like": ("点赞成功", "今天已经点赞过了"), "favorite": ("收藏成功", "今天已经收藏过了")}
+
+
+@app.post("/api/resources/{resource_id}/{action}")
+def react_to_resource(request: Request, resource_id: int, action: str, db: Session = Depends(get_db)):
+    if action not in ACTION_LABELS:
+        raise HTTPException(status_code=400, detail="不支持的操作")
     resource = crud.get_resource(db, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="资源不存在")
     client_token, is_new_cookie = get_or_create_client_token(request)
-    accepted, updated = crud.register_reaction(db, resource, client_token, "like")
+    accepted, updated = crud.register_reaction(db, resource, client_token, action)
+    success_msg, duplicate_msg = ACTION_LABELS[action]
     response = JSONResponse(
         {
             "resource_id": updated.id,
             "likes": updated.likes,
             "favorites": updated.favorites,
             "accepted": accepted,
-            "message": "点赞成功" if accepted else "今天已经点赞过了",
-        }
-    )
-    if is_new_cookie:
-        response.set_cookie(
-            key=CLIENT_TOKEN_COOKIE,
-            value=client_token,
-            max_age=CLIENT_TOKEN_MAX_AGE,
-            httponly=True,
-            samesite="lax",
-            secure=False,
-        )
-    return response
-
-
-@app.post("/api/resources/{resource_id}/favorite")
-def favorite_resource(request: Request, resource_id: int, db: Session = Depends(get_db)):
-    resource = crud.get_resource(db, resource_id)
-    if not resource:
-        raise HTTPException(status_code=404, detail="资源不存在")
-    client_token, is_new_cookie = get_or_create_client_token(request)
-    accepted, updated = crud.register_reaction(db, resource, client_token, "favorite")
-    response = JSONResponse(
-        {
-            "resource_id": updated.id,
-            "likes": updated.likes,
-            "favorites": updated.favorites,
-            "accepted": accepted,
-            "message": "收藏成功" if accepted else "今天已经收藏过了",
+            "message": success_msg if accepted else duplicate_msg,
         }
     )
     if is_new_cookie:

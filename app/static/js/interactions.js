@@ -1,4 +1,6 @@
 (() => {
+    const DEBOUNCE_MS = 600;
+
     const showInteractionTip = (message, isWarning = false) => {
         if (!message) {
             return;
@@ -55,6 +57,10 @@
             if (!resourceId || !action) {
                 return;
             }
+            if (button.dataset.busy === "1") {
+                return;
+            }
+            button.dataset.busy = "1";
             button.disabled = true;
             try {
                 const response = await fetch(`/api/resources/${resourceId}/${action}`, {
@@ -67,11 +73,17 @@
                 const data = await response.json();
                 updateReactionCounters(data.resource_id, data.likes, data.favorites);
                 showInteractionTip(data.message || "操作成功", !data.accepted);
+                if (data.accepted) {
+                    button.classList.remove("interaction-pulse");
+                    void button.offsetWidth;
+                    button.classList.add("interaction-pulse");
+                }
             } catch (error) {
                 console.error(error);
                 showInteractionTip("操作失败，请稍后重试", true);
             } finally {
                 button.disabled = false;
+                window.setTimeout(() => { button.dataset.busy = "0"; }, DEBOUNCE_MS);
             }
         });
     };

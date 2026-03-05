@@ -2,14 +2,35 @@
 {% block content %}
 <section class="row justify-content-center">
     <div class="col-md-8 col-xl-6">
-        <div class="alert {% if is_error %}alert-danger{% else %}alert-success{% endif %} shadow-sm">
+        <div class="alert {% if is_error %}alert-danger{% else %}alert-success{% endif %} shadow-sm text-center">
+            <div class="mb-3" style="font-size: 3rem;">{% if is_error %}&#10060;{% else %}&#9989;{% endif %}</div>
             <h1 class="h5 mb-3">{{ title }}</h1>
             <p class="mb-3">{{ message }}</p>
-            <div class="d-flex gap-2">
+            {% if not is_error %}
+            <p class="small text-secondary mb-3"><span id="countdown">5</span> 秒后自动跳转首页...</p>
+            {% endif %}
+            <div class="d-flex gap-2 justify-content-center">
                 <a href="/" class="btn btn-sm btn-outline-dark">返回首页</a>
                 <a href="/upload" class="btn btn-sm btn-warning">继续上传</a>
             </div>
         </div>
     </div>
 </section>
+
+{% if not is_error %}
+<script>
+(function() {
+    var count = 5;
+    var el = document.getElementById('countdown');
+    var timer = setInterval(function() {
+        count--;
+        if (el) el.textContent = count;
+        if (count <= 0) {
+            clearInterval(timer);
+            window.location.href = '/';
+        }
+    }, 1000);
+})();
+</script>
+{% endif %}
 {% endblock %}

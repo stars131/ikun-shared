@@ -78,7 +78,13 @@
         saveBtn.addEventListener("click", () => {
             localStorage.setItem(VIEW_KEY, selectedView);
             localStorage.setItem(CAROUSEL_KEY, autoplaySwitch.checked ? "on" : "off");
-            window.location.href = `/?view=${selectedView}`;
+            saveBtn.textContent = "已保存 \u2713";
+            saveBtn.classList.remove("btn-warning");
+            saveBtn.classList.add("btn-success");
+            saveBtn.disabled = true;
+            window.setTimeout(() => {
+                window.location.href = `/?view=${selectedView}`;
+            }, 800);
         });
     };
 

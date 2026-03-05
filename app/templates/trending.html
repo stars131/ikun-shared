@@ -27,28 +27,40 @@
                 <tr>
                     <th style="width: 72px;">排名</th>
                     <th>资源</th>
-                    <th style="width: 180px;">分类/下载</th>
-                    <th style="width: 140px;">趋势分</th>
+                    <th class="d-none d-md-table-cell" style="width: 100px;">分类</th>
+                    <th style="width: 80px;">下载</th>
+                    <th class="d-none d-sm-table-cell" style="width: 70px;">👍</th>
+                    <th class="d-none d-sm-table-cell" style="width: 70px;">⭐</th>
+                    <th style="width: 100px;">趋势分</th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for item in resources %}
-                <tr>
+                <tr class="trending-row">
                     <td>
                         <span class="rank-badge rank-{{ loop.index if loop.index <= 3 else 'n' }}">{{ loop.index }}</span>
                     </td>
                     <td>
                         <a href="/resource/{{ item.id }}" class="fw-semibold text-decoration-none">{{ item.title }}</a>
                         <div class="small text-secondary mt-1">作者：{{ item.author }}</div>
+                        <div class="d-md-none small text-secondary">{{ item.category_label }}</div>
                         <div class="d-flex flex-wrap gap-1 mt-2">
                             {% for tag in item.tag_list[:4] %}
                             <span class="badge rounded-pill text-bg-light">#{{ tag }}</span>
                             {% endfor %}
                         </div>
                     </td>
-                    <td>
+                    <td class="d-none d-md-table-cell">
                         <div class="small">{{ item.category_label }}</div>
-                        <div class="small text-secondary">下载 {{ item.downloads }}</div>
+                    </td>
+                    <td>
+                        <div class="small">{{ item.downloads }}</div>
+                    </td>
+                    <td class="d-none d-sm-table-cell">
+                        <div class="small">{{ item.likes }}</div>
+                    </td>
+                    <td class="d-none d-sm-table-cell">
+                        <div class="small">{{ item.favorites }}</div>
                     </td>
                     <td><strong>{{ item.trending_score or item.downloads }}</strong></td>
                 </tr>

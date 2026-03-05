@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a href="/">首页</a></li>
+        <li class="breadcrumb-item"><a href="/?category={{ resource.category }}">{{ resource.category_label }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ resource.title }}</li>
+    </ol>
+</nav>
+
 <article class="row g-4">
     <section class="col-lg-8">
         <div class="card shadow-sm border-0">
@@ -60,12 +68,17 @@
     <aside class="col-lg-4">
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-body">
-                <h2 class="h6 mb-3">文件标签</h2>
-                <div class="d-flex flex-wrap gap-2">
-                    {% for tag in resource.tag_list %}
-                    <span class="badge rounded-pill text-bg-light">#{{ tag }}</span>
-                    {% endfor %}
-                </div>
+                <h2 class="h6 mb-3">资源信息</h2>
+                <dl class="row small mb-0">
+                    <dt class="col-4 text-secondary">分类</dt>
+                    <dd class="col-8">{{ resource.category_label }}</dd>
+                    <dt class="col-4 text-secondary">作者</dt>
+                    <dd class="col-8">{{ resource.author }}</dd>
+                    <dt class="col-4 text-secondary">下载次数</dt>
+                    <dd class="col-8">{{ resource.downloads }}</dd>
+                    <dt class="col-4 text-secondary">上传时间</dt>
+                    <dd class="col-8 mb-0">{{ resource.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                </dl>
             </div>
         </div>
 
