@@ -83,12 +83,12 @@
             saveBtn.classList.add("btn-success");
             saveBtn.disabled = true;
             window.setTimeout(() => {
-                window.location.href = `/?view=${selectedView}`;
+                window.location.href = `/browse?view=${selectedView}`;
             }, 800);
         });
     };
 
-    if (window.location.pathname === "/") {
+    if (window.location.pathname === "/browse") {
         initHomePage();
     }
     if (window.location.pathname === "/settings") {

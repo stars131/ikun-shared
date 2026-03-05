@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 
 from .database import Base
 
@@ -63,6 +63,32 @@ class Resource(Base):
         if not tags:
             tags.append(self.category_label)
         return tags[:8]
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    display_name = Column(String(100), default="")
+    password_hash = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class OAuthAccount(Base):
+    __tablename__ = "oauth_accounts"
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_id", name="uq_oauth_provider_user"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = Column(String(32), nullable=False, index=True)
+    provider_user_id = Column(String(128), nullable=False, index=True)
+    provider_username = Column(String(100), default="")
+    provider_display_name = Column(String(200), default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
 class ResourceReaction(Base):

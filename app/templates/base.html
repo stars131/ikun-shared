@@ -18,12 +18,20 @@
         </button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">分类资源</a></li>
+                <li class="nav-item"><a class="nav-link {% if request.url.path == '/browse' %}active{% endif %}" href="/browse">分类资源</a></li>
                 <li class="nav-item"><a class="nav-link {% if request.url.path == '/trending' %}active{% endif %}" href="/trending">趋势榜</a></li>
                 <li class="nav-item"><a class="nav-link {% if request.url.path == '/upload' %}active{% endif %}" href="/upload">上传资源</a></li>
                 <li class="nav-item"><a class="nav-link {% if request.url.path == '/settings' %}active{% endif %}" href="/settings">设置</a></li>
             </ul>
-            <span class="navbar-text text-secondary small">GitHub 分类 · 小红书帖子模式</span>
+            {% if current_user %}
+                <span class="navbar-text text-light me-2">{{ current_user.username }}</span>
+                <form action="/logout" method="post" class="d-inline mb-0">
+                    <button type="submit" class="btn btn-sm btn-outline-light">退出</button>
+                </form>
+            {% else %}
+                <a href="/login" class="btn btn-sm btn-outline-light me-1">登录</a>
+                <a href="/login#register" class="btn btn-sm btn-warning">注册</a>
+            {% endif %}
         </div>
     </div>
 </nav>

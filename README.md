@@ -13,6 +13,7 @@
 - 点赞与收藏（实时计数）
 - 点赞/收藏去重（同一设备每天同资源同动作仅一次）
 - 上传文件或外链，自动补齐文件标签
+- 账号注册/登录 + LinuxDO OAuth 登录（可配置开关）
 
 ## 本地开发
 
@@ -31,13 +32,24 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - 上传页：`http://127.0.0.1:8000/upload`
 - 设置页：`http://127.0.0.1:8000/settings`
 
+本地运行前请设置环境变量（PowerShell 示例）：
+
+```powershell
+$env:SECRET_KEY = "dev-local-secret"
+$env:COOKIE_SECURE = "false"
+```
+
 ## 数据库迁移（Alembic）
 
 ```bash
 alembic upgrade head
 ```
 
-当前迁移文件：`alembic/versions/20260304_0001_reactions_migration.py`
+当前迁移文件：
+
+- `alembic/versions/20260304_0001_reactions_migration.py`
+- `alembic/versions/20260305_0002_add_users_table.py`
+- `alembic/versions/20260305_0003_add_oauth_accounts_table.py`
 
 ## Docker 开发部署
 
@@ -66,6 +78,14 @@ alembic upgrade head
 copy .env.production.example .env
 docker compose -f docker-compose.prod.yml up -d --build
 ```
+
+LinuxDO OAuth 相关可选变量：
+
+- `LINUXDO_OAUTH_ENABLED=true`
+- `LINUXDO_CLIENT_ID=...`
+- `LINUXDO_CLIENT_SECRET=...`
+- `LINUXDO_REDIRECT_URI=https://your-domain/auth/linuxdo/callback`（可选，反向代理场景建议设置）
+- `FORWARDED_ALLOW_IPS=*`（Docker 反向代理推荐开启）
 
 ## 项目结构
 

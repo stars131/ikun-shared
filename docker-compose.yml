@@ -7,6 +7,10 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=sqlite:///./data/ikun.db
+      - SECRET_KEY=dev-change-this-secret
+      - COOKIE_SECURE=false
+      - LINUXDO_OAUTH_ENABLED=false
+      - FORWARDED_ALLOW_IPS=*
     volumes:
       - ./data:/srv/ikun/data
       - ./app/uploads:/srv/ikun/app/uploads

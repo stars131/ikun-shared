@@ -10,7 +10,7 @@
             <p class="small text-secondary mb-3"><span id="countdown">5</span> 秒后自动跳转首页...</p>
             {% endif %}
             <div class="d-flex gap-2 justify-content-center">
-                <a href="/" class="btn btn-sm btn-outline-dark">返回首页</a>
+                <a href="/browse" class="btn btn-sm btn-outline-dark">返回首页</a>
                 <a href="/upload" class="btn btn-sm btn-warning">继续上传</a>
             </div>
         </div>
@@ -27,7 +27,7 @@
         if (el) el.textContent = count;
         if (count <= 0) {
             clearInterval(timer);
-            window.location.href = '/';
+            window.location.href = '/browse';
         }
     }, 1000);
 })();

@@ -2,8 +2,8 @@
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb small">
-        <li class="breadcrumb-item"><a href="/">首页</a></li>
-        <li class="breadcrumb-item"><a href="/?category={{ resource.category }}">{{ resource.category_label }}</a></li>
+        <li class="breadcrumb-item"><a href="/browse">首页</a></li>
+        <li class="breadcrumb-item"><a href="/browse?category={{ resource.category }}">{{ resource.category_label }}</a></li>
         <li class="breadcrumb-item active" aria-current="page">{{ resource.title }}</li>
     </ol>
 </nav>
@@ -59,7 +59,7 @@
                     {% if resource.external_url %}
                     <a href="{{ resource.external_url }}" class="btn btn-outline-secondary" target="_blank" rel="noopener">打开外链</a>
                     {% endif %}
-                    <a href="/" class="btn btn-outline-dark">返回分类</a>
+                    <a href="/browse" class="btn btn-outline-dark">返回分类</a>
                 </div>
             </div>
         </div>
